@@ -94,10 +94,11 @@ def servers_create():
         network_id = params['network_id']
         server_name = params['server_name']
     except KeyError:
-        return jsonify({
+        resp = jsonify({
             'success': False,
             'message': 'missing required param',
         })
+        return resp, 422
 
     g.conn.compute.create_server(
         name=server_name,
