@@ -1,0 +1,11 @@
+version: '3'
+services:
+  web:
+    build: .
+    command: uwsgi --ini uwsgi.conf --socket 0.0.0.0:9000 --protocol=http
+  nginx:
+    image: "nginx:1.17.5"
+    ports:
+      - "8080:8080"
+    volumes:
+      - "./nginx.conf:/etc/nginx/nginx.conf:ro"
