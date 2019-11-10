@@ -1,6 +1,8 @@
+import functools
+
 import ConfigParser
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
@@ -15,36 +17,55 @@ if not config:
     raise RuntimeError('missing project.conf')
 
 
-# TODO: Add keystone auth
-def get_openstack_connection():
-    auth = v3.Password(
-        auth_url=config.get('keystoneauth', 'auth_url'),
-        username=config.get('keystoneauth', 'username'),
-        password=config.get('keystoneauth', 'password'),
-        project_name=config.get('keystoneauth', 'project_name'),
-        user_domain_id=config.get('keystoneauth', 'user_domain_id'),
-        project_domain_id=config.get('keystoneauth', 'project_domain_id'),
-    )
-    sess = session.Session(auth=auth)
+def keystoneauth(fn):
+    """Authenticate user and add connection and session info to `g'.
+    """
+    @functools.wraps(fn)
+    def _inner(*args, **kwargs):
+        username = request.headers.get('X-Keystone-Username')
+        password = request.headers.get('X-Keystone-Password')
 
-    conn = openstack.connection.Connection(
-        session=sess,
-        region_name='RegionOne',
-    )
+        if not username or not password:
+            resp = jsonify({
+                'success': False,
+                'message': 'Auth failed: X-Keystone-Username and X-Keystone-Password headers are required',
+            })
+            return resp, 401
 
-    return conn
+        auth = v3.Password(
+            auth_url=config.get('keystoneauth', 'auth_url'),
+            username=username,
+            password=password,
+            project_name=config.get('keystoneauth', 'project_name'),
+            user_domain_id=config.get('keystoneauth', 'user_domain_id'),
+            project_domain_id=config.get('keystoneauth', 'project_domain_id'),
+        )
+        sess = session.Session(auth=auth)
+        conn = openstack.connection.Connection(
+            session=sess,
+            region_name=config.get('keystoneauth', 'region_name'),
+        )
+
+        g.conn = conn
+        response = fn(*args, **kwargs)
+        g.conn = None
+
+        return response
+
+    return _inner
 
 
 @app.route('/')
+@keystoneauth
 def hello_world():
     return 'Hello World!'
 
 
 @app.route('/servers', methods=['GET'])
+@keystoneauth
 def servers_list():
-    conn = get_openstack_connection()
     data = []
-    for server in conn.compute.servers():
+    for server in g.conn.compute.servers():
         addrs = server.addresses.get('public', [])
 
         data.append({
@@ -63,8 +84,8 @@ def servers_list():
 
 
 @app.route('/servers/create', methods=['POST'])
+@keystoneauth
 def servers_create():
-    conn = get_openstack_connection()
     params = request.json
 
     try:
@@ -78,7 +99,7 @@ def servers_create():
             'message': 'missing required param',
         })
 
-    conn.compute.create_server(
+    g.conn.compute.create_server(
         name=server_name,
         image_id=image_id,
         flavor_id=flavor_id,
@@ -92,12 +113,11 @@ def servers_create():
 
 
 @app.route('/servers/<server_name>', methods=['DELETE'])
+@keystoneauth
 def servers_delete(server_name):
-    conn = get_openstack_connection()
-
-    server = conn.compute.find_server(server_name)
+    server = g.conn.compute.find_server(server_name)
     if server is not None:
-        conn.compute.delete_server(server)
+        g.conn.compute.delete_server(server)
 
     return jsonify({
         'success': True,
@@ -105,11 +125,10 @@ def servers_delete(server_name):
 
 
 @app.route('/images', methods=['GET'])
+@keystoneauth
 def images_list():
-    conn = get_openstack_connection()
     data = []
-
-    for image in conn.compute.images():
+    for image in g.conn.compute.images():
         data.append({
             'id': image.id,
             'name': image.name,
@@ -122,11 +141,10 @@ def images_list():
 
 
 @app.route('/flavors', methods=['GET'])
+@keystoneauth
 def flavors_list():
-    conn = get_openstack_connection()
     data = []
-
-    for flavor in conn.compute.flavors():
+    for flavor in g.conn.compute.flavors():
         data.append({
             'id': flavor.id,
             'name': flavor.name,
@@ -140,11 +158,10 @@ def flavors_list():
 
 
 @app.route('/networks', methods=['GET'])
+@keystoneauth
 def networks_list():
-    conn = get_openstack_connection()
     data = []
-
-    for network in conn.network.networks():
+    for network in g.conn.network.networks():
         data.append({
             'id': network.id,
             'name': network.name,

@@ -10,3 +10,4 @@ password = secret
 project_name = admin
 user_doain_id = default
 project_domain_id = default
+region_name = RegionOne
