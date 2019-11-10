@@ -62,6 +62,48 @@ def servers_list():
     return jsonify(data)
 
 
+@app.route('/servers/create', methods=['POST'])
+def servers_create():
+    conn = get_openstack_connection()
+    params = request.json
+
+    try:
+        image_id = params['image_id']
+        flavor_id = params['flavor_id']
+        network_id = params['network_id']
+        server_name = params['server_name']
+    except KeyError:
+        return jsonify({
+            'success': False,
+            'message': 'missing required param',
+        })
+
+    conn.compute.create_server(
+        name=server_name,
+        image_id=image_id,
+        flavor_id=flavor_id,
+        networks=[{"uuid": network_id}],
+        availability_zone='nova',
+    )
+
+    return jsonify({
+        'success': True,
+    })
+
+
+@app.route('/servers/<server_name>', methods=['DELETE'])
+def servers_delete(server_name):
+    conn = get_openstack_connection()
+
+    server = conn.compute.find_server(server_name)
+    if server is not None:
+        conn.compute.delete_server(server)
+
+    return jsonify({
+        'success': True,
+    })
+
+
 @app.route('/images', methods=['GET'])
 def images_list():
     conn = get_openstack_connection()
