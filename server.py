@@ -1,4 +1,6 @@
 import functools
+import markdown
+import codecs
 
 import ConfigParser
 
@@ -56,9 +58,9 @@ def keystoneauth(fn):
 
 
 @app.route('/')
-@keystoneauth
-def hello_world():
-    return 'Hello World!'
+def index():
+    with codecs.open('README.md', encoding="utf-8") as f:
+        return markdown.markdown(f.read())
 
 
 @app.route('/servers', methods=['GET'])
