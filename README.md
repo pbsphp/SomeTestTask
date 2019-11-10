@@ -20,13 +20,60 @@
 API
 ---
 
-Для всех запросов должны передаваться заголовки X-Keystone-Username и X-Keystone-Password с соответствующими значениями.
+Для всех запросов должны передаваться заголовки `X-Keystone-Username` и `X-Keystone-Password` с соответствующими значениями.
 
 Список урлов следующий:
 
-GET /servers - Получить список серверов.
-POST /servers/create - Создать новый сервер. Параметры: flavor_id, network_id, image_id, server_name (все обязательны).
-DELETE /servers/%(server_name)s - Удалить сервер по имени (если существует).
-GET /images - Получить список образов, в т.ч. их image_id для создания ВМ.
-GET /flavors - Получить список (привкусов? лол), в т.ч. их flavor_id для создания ВМ.
-GET /networks - Получить список сетей, в т.ч. их network_id для создания ВМ.
+* `GET /servers` - Получить список серверов.
+* `POST /servers/create` - Создать новый сервер. Параметры: `flavor_id`, `network_id`, `image_id`, `server_name` (все обязательны).
+* `DELETE /servers/<server_name>` - Удалить сервер по имени (если существует).
+* `GET /images` - Получить список образов, в т.ч. их `image_id` для создания ВМ.
+* `GET /flavors` - Получить список (привкусов? лол), в т.ч. их `flavor_id` для создания ВМ.
+* `GET /networks` - Получить список сетей, в т.ч. их `network_id` для создания ВМ.
+
+Соответственно, сценарий использования примерно такой:
+
+* Зайти на `GET /images`, получить список образов и "запомнить" id нужного.
+* Зайти на `GET /flavors`, получить список flavors и выбрать подходящий и "запомнить" его id.
+* Зайти на `GET /networks`, получить список сетей, "запомнить" id нужной.
+* Зайти на `POST /servers/create`, передав туда идентификаторы выбранных выше сущностей в виде параметров `flavor_id`, `network_id`, `image_id`, а также название создаваемого сервера в `server_name`.
+* Зайти на `GET /servers` и убедиться, что сервер с `server_name` создан. Опционально, дождаться, пока запустится.
+* Зайти на `DELETE /servers/<server_name>`, чтобы созданный в предыдущем пункте сервер был удален.
+
+P.S. Не забыть про аутентификацию и передавать везде заголовки `X-Keystone-Username` и `X-Keystone-Password`.
+
+Запуск приложения
+-----------------
+
+* Поставить python 2.7.
+* `pip install -r requirements.txt`
+* Скопировать `project.conf.example` в `project.conf` и заполнить параметры правильными значениями.
+
+Curl
+----
+
+_В этой секции могло сломаться форматирование. Но можно почитать этот ридми на гитхабе._
+
+```bash
+<pre>
+# Вот эти параметры нужно заменить
+KS_ADDR="localhost:8080"
+KS_USERNAME=admin
+KS_PASSWORD=secret
+
+# Посмотреть краткий список образов
+curl --silent "$KS_ADDR/images" -H "X-Keystone-Username: $KS_USERNAME" -H "X-Keystone-Password: $KS_PASSWORD" 2>&1 | grep -i "\"id\":\|\"name\":"
+
+# Посмотреть краткий список flavors
+curl --silent "$KS_ADDR/flavors" -H "X-Keystone-Username: $KS_USERNAME" -H "X-Keystone-Password: $KS_PASSWORD" 2>&1 | grep -i "\"id\":\|\"name\":"
+
+# Посмотреть краткий список сетей
+curl --silent "$KS_ADDR/networks" -H "X-Keystone-Username: $KS_USERNAME" -H "X-Keystone-Password: $KS_PASSWORD" 2>&1 | grep -i "\"id\":\|\"name\":"
+
+# Посмотреть краткий список серверов
+curl --silent "$KS_ADDR/servers" -H "X-Keystone-Username: $KS_USERNAME" -H "X-Keystone-Password: $KS_PASSWORD" 2>&1 | grep -i "\"status\":\|\"name\":"
+
+# Команда для создания ВМ предполагает передачу json с айдишниками штуковин, полученных командами выше, поэтому не может быть сформирован прямо сейчас - айдишники могут поменяться.
+
+</pre>
+```
