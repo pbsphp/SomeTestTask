@@ -78,8 +78,6 @@ def servers_list():
             'volume_ids': [x['id'] for x in server.attached_volumes]
         })
 
-    # TODO: Fix manual json serialization
-    # TODO: Add Content-Type: application/json header.
     return jsonify(data)
 
 
