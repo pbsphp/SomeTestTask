@@ -1,0 +1,12 @@
+[flask]
+debug = false
+host = 0.0.0.0
+port = 80
+
+[keystoneauth]
+auth_url = http://example.com/identity/v3
+username = username
+password = secret
+project_name = admin
+user_doain_id = default
+project_domain_id = default
