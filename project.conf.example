@@ -3,6 +3,9 @@ debug = false
 host = 0.0.0.0
 port = 80
 
+[app]
+pretty_json = true
+
 [keystoneauth]
 auth_url = http://example.com/identity/v3
 project_name = admin

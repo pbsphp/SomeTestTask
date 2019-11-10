@@ -8,12 +8,13 @@ from flask import Flask, g, jsonify, request
 from keystoneauth1 import session
 from keystoneauth1.identity import v3
 
-app = Flask(__name__)
-
 config = ConfigParser.RawConfigParser()
 config.read('project.conf')
 if not config:
     raise RuntimeError('missing project.conf')
+
+app = Flask(__name__)
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = config.getboolean('app', 'pretty_json')
 
 
 def keystoneauth(fn):
