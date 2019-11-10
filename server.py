@@ -1,15 +1,12 @@
-import functools
-import markdown
 import codecs
-
 import ConfigParser
+import functools
 
-from flask import Flask, jsonify, request, g
-
-from keystoneauth1.identity import v3
-from keystoneauth1 import session
-
+import markdown
 import openstack
+from flask import Flask, g, jsonify, request
+from keystoneauth1 import session
+from keystoneauth1.identity import v3
 
 app = Flask(__name__)
 
