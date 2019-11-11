@@ -64,13 +64,24 @@ def index():
 @app.route('/servers', methods=['GET'])
 @keystoneauth
 def servers_list():
+    def get_addr_data(all_data, kind):
+        return {
+            'version': all_data.get('version'),
+            'addr': all_data.get('addr'),
+            'kind': kind,
+        }
+
     data = []
     for server in g.conn.compute.servers():
-        addrs = server.addresses.get('public', [])
+        addr_data = []
+        for kind in ('public', 'private', 'shared'):
+            addr = server.addresses.get(kind)
+            if addr:
+                addr_data.extend(get_addr_data(x, kind) for x in addr)
 
         data.append({
             'name': server.name,
-            'addresses': [x['addr'] for x in addrs],
+            'addresses': addr_data,
             'description': server.description,
             'image_id': server.image_id,
             'status': server.status,
